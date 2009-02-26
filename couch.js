@@ -13,10 +13,11 @@
 // A simple class to represent a database. Uses XMLHttpRequest to interface with
 // the CouchDB server.
 
-function CouchDB(name) {
+function CouchDB(name, server) {
   this.name = name
-  this.uri = "/" + encodeURIComponent(name) + "/";
-  request = CouchDB.request;
+  this.uri = ((server && server.uri) ? server.uri : "") + "/" +
+    encodeURIComponent(name) + "/";
+  request = (server && server.request) ? server.request : CouchDB.request;
 
   // Creates the database on the server
   this.createDb = function() {
@@ -221,4 +222,74 @@ CouchDB.request = function(method, uri, options) {
   }
   req.send(options.body || "");
   return req;
-}
+};
+
+function CouchDBServer(uri) {
+    this.uri = uri || "http://localhost:5984";
+
+    this.openDb = function openDb(name) {
+        var db = new CouchDB(name, this);
+        return db;
+    };
+
+    this.createDb = function createDB(name) {
+        var db = this.openDb(name);
+        try {
+            db = db.createDb(name);
+            return db;
+        } catch (e) { 
+            if (e && e.error) { throw new Error(JSON.stringify(e)); }
+        }
+    };
+
+    this.deleteDb = function deleteDb(name) {
+        var db = this.openDb(name);
+        return db.deleteDb();
+    };
+
+    // Redefine the CouchDB static methods as methods of this
+    this.allDbs = function allDbs() {
+        var req = this.request("GET", this.uri + "/_all_dbs");
+        var result = JSON.parse(req.responseText);
+        if (req.status != 200) { throw result; }
+        return result;
+    };
+
+    this.getVersion = function getVersion() {
+        var req = this.request("GET", this.uri + "/");
+        var result = JSON.parse(req.responseText);
+        if (req.status != 200) { throw result; }
+        return result.version;
+    };
+
+    this.replicate = function replicate(source, target) {
+        var req = this.request("POST", this.uri + "/_replicate", {
+            body: JSON.stringify({source: source, target: target})
+        });
+        var result = JSON.parse(req.responseText);
+        if (req.status != 200) { throw result; }
+        return result;
+    };
+
+    this.request = function request(method, uri, options) {
+        options = options || {};
+        var req = null;
+        if (typeof(XMLHttpRequest) != "undefined") {
+            req = new XMLHttpRequest();
+        } else if (typeof(ActiveXObject) != "undefined") {
+            req = new ActiveXObject("Microsoft.XMLHTTP");
+        } else {
+            throw new Error("No XMLHTTPRequest support detected");
+        }
+        req.open(method, uri, false);
+        if (options.headers) {
+            var headers = options.headers;
+            for (var headerName in headers) {
+                if (!headers.hasOwnProperty(headerName)) { continue; }
+                req.setRequestHeader(headerName, headers[headerName]);
+            }
+        }
+        req.send(options.body || "");
+        return req;
+    };
+};
