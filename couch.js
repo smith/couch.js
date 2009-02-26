@@ -13,6 +13,12 @@
 // A simple class to represent a database. Uses XMLHttpRequest to interface with
 // the CouchDB server.
 
+// Verify we have a JSON library
+if (typeof JSON !== "object" || typeof JSON.parse !== "function" || 
+    typeof JSON.stringify !== "function") { 
+    throw new Error("A JSON library was not found");
+}
+
 function CouchDB(name, server) {
   this.name = name
   this.uri = ((server && server.uri) ? server.uri : "") + "/" +
