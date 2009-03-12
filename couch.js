@@ -107,15 +107,26 @@ function CouchDB(name, httpHeaders, server) {
       if (docs[i]._id == undefined)
         docs[i]._id = newUuids.pop();
     }
-    this.last_req = this.request("POST", this.uri + "_bulk_docs" + encodeOptions(options), {
-      body: JSON.stringify({"docs": docs})
-    });
-    CouchDB.maybeThrowError(this.last_req);
-    var result = JSON.parse(this.last_req.responseText);
-    for (var i = 0; i < docs.length; i++) {
-        docs[i]._rev = result.new_revs[i].rev;
+    var json = {"docs": docs};
+    // put any options in the json
+    for (var option in options) {
+      json[option] = options[option];
     }
-    return result;
+    this.last_req = this.request("POST", this.uri + "_bulk_docs", {
+      body: JSON.stringify(json)
+    });
+    if (this.last_req.status == 417) {
+      return {errors: JSON.parse(this.last_req.responseText)};
+    }
+    else {
+      CouchDB.maybeThrowError(this.last_req);
+      var results = JSON.parse(this.last_req.responseText);
+      for (var i = 0; i < docs.length; i++) {
+        if(results[i].rev)
+          docs[i]._rev = results[i].rev;
+      }
+      return results;
+    }
   }
   
   this.ensureFullCommit = function() {
