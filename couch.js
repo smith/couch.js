@@ -222,7 +222,21 @@ function CouchDB(name, httpHeaders, server) {
     CouchDB.maybeThrowError(this.last_req);
     return JSON.parse(this.last_req.responseText);
   }
+
+  this.setDbProperty = function(propId, propValue) {
+    this.last_req = this.request("PUT", this.uri + propId,{
+      body:JSON.stringify(propValue)
+    });
+    CouchDB.maybeThrowError(this.last_req);
+    return JSON.parse(this.last_req.responseText);
+  }
   
+  this.getDbProperty = function(propId) {
+    this.last_req = this.request("GET", this.uri + propId);
+    CouchDB.maybeThrowError(this.last_req);
+    return JSON.parse(this.last_req.responseText);
+  }
+
   this.setAdmins = function(adminsArray) {
     this.last_req = this.request("PUT", this.uri + "_admins",{
       body:JSON.stringify(adminsArray)
@@ -303,8 +317,11 @@ CouchDB.getVersion = function() {
   return JSON.parse(CouchDB.last_req.responseText).version;
 }
 
-CouchDB.replicate = function(source, target) {
+CouchDB.replicate = function(source, target, rep_options) {
+  rep_options = rep_options || {};
+  var headers = rep_options.headers || {};
   CouchDB.last_req = CouchDB.request("POST", "/_replicate", {
+    headers: headers,
     body: JSON.stringify({source: source, target: target})
   });
   CouchDB.maybeThrowError(CouchDB.last_req);
