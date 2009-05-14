@@ -328,16 +328,19 @@ CouchDB.replicate = function(source, target, rep_options) {
   return JSON.parse(CouchDB.last_req.responseText);
 }
 
-CouchDB.request = function(method, uri, options) {
-  options = options || {};
-  var req = null;
+CouchDB.newXhr = function() {
   if (typeof(XMLHttpRequest) != "undefined") {
-    req = new XMLHttpRequest();
+    return new XMLHttpRequest();
   } else if (typeof(ActiveXObject) != "undefined") {
-    req = new ActiveXObject("Microsoft.XMLHTTP");
+    return new ActiveXObject("Microsoft.XMLHTTP");
   } else {
     throw new Error("No XMLHTTPRequest support detected");
   }
+}
+
+CouchDB.request = function(method, uri, options) {
+  options = options || {};
+  var req = CouchDB.newXhr();
   req.open(method, uri, false);
   if (options.headers) {
     var headers = options.headers;
@@ -425,7 +428,7 @@ function CouchDBServer(uri) {
     };
 
     this.createDb = function createDb(name) {
-        var forceCreate = true 
+        var forceCreate = true; 
         return this.openDb(name, forceCreate);
     };
 
@@ -447,7 +450,7 @@ function CouchDBServer(uri) {
         for (var i = 0; i < dbs.length; i += 1) {
             var db = new CouchDB(dbs[i], this);
             ddocs[dbs[i]] = db.designDocs();
-        };
+        }
         return ddocs;
     };
 
@@ -468,22 +471,16 @@ function CouchDBServer(uri) {
     this.request = function request(method, uri, options) {
         options = options || {};
         uri = this.uri + (uri || "");
-        var req = null;
+        var req = CouchDB.newXhr();
         var headers = options.headers;
 
-        if (typeof XMLHttpRequest !== "undefined") {
-            req = new XMLHttpRequest();
-        } else if (typeof ActiveXObject !== "undefined") {
-            req = new ActiveXObject("Microsoft.XMLHTTP");
-        } else {
-            throw new Error("No XMLHTTPRequest support detected");
-        }
         req.open(method, uri, false);
 
         if (headers) {
             for (var headerName in headers) {
-                if (!headers.hasOwnProperty(headerName)) { continue; }
+                if (headers.hasOwnProperty(headerName)) {
                 req.setRequestHeader(headerName, headers[headerName]);
+                } else { continue; }
             }
         }
         req.send(options.body || "");
