@@ -25,6 +25,7 @@ function CouchDB(name, httpHeaders, server) {
   this.name = name;
   this.uri = (server && server.uri ? server.uri : "") + "/" + 
     encodeURIComponent(name) + "/";
+  this.server = server;
   
   // The XMLHttpRequest object from the most recent request. Callers can
   // use this to check result http status and headers.
@@ -55,7 +56,7 @@ function CouchDB(name, httpHeaders, server) {
   // Save a document to the database
   this.save = function(doc, options) {
     if (doc._id == undefined)
-      doc._id = CouchDB.newUuids(1)[0];
+      doc._id = this.newUuids(1)[0];
 
     this.last_req = this.request("PUT", this.uri  + 
         encodeURIComponent(doc._id) + encodeOptions(options),
@@ -101,7 +102,7 @@ function CouchDB(name, httpHeaders, server) {
       if (docs[i]._id == undefined)
         newCount++;
     }
-    var newUuids = CouchDB.newUuids(docs.length);
+    var newUuids = this.newUuids(docs.length);
     var newCount = 0
     for (var i=0; i<docs.length; i++) {
       if (docs[i]._id == undefined)
@@ -134,6 +135,26 @@ function CouchDB(name, httpHeaders, server) {
     CouchDB.maybeThrowError(this.last_req);
     return JSON.parse(this.last_req.responseText);
   }
+  
+  this.newUuids = function(n) {
+	  if (CouchDB.uuids_cache.length >= n) {
+	    var uuids = CouchDB.uuids_cache.slice(CouchDB.uuids_cache.length - n);
+	    if(CouchDB.uuids_cache.length - n == 0) {
+	      CouchDB.uuids_cache = [];
+	    } else {
+	      CouchDB.uuids_cache =
+	          CouchDB.uuids_cache.slice(0, CouchDB.uuids_cache.length - n);
+	    }
+	    return uuids;
+	  } else {
+	    CouchDB.last_req = CouchDB.request("GET", (this.server && this.server.uri ? this.server.uri : "") + "/_uuids?count=" + (100 + n));
+	    CouchDB.maybeThrowError(CouchDB.last_req);
+	    var result = JSON.parse(CouchDB.last_req.responseText);
+	    CouchDB.uuids_cache =
+	        CouchDB.uuids_cache.concat(result.uuids.slice(0, 100));
+	    return result.uuids.slice(100);
+	  }
+	}
 
   // Applies the map function to the contents of database and returns the results.
   this.query = function(mapFun, reduceFun, options, keys) {
@@ -364,26 +385,6 @@ CouchDB.requestStats = function(module, key, test) {
 }
 
 CouchDB.uuids_cache = [];
-
-CouchDB.newUuids = function(n) {
-  if (CouchDB.uuids_cache.length >= n) {
-    var uuids = CouchDB.uuids_cache.slice(CouchDB.uuids_cache.length - n);
-    if(CouchDB.uuids_cache.length - n == 0) {
-      CouchDB.uuids_cache = [];
-    } else {
-      CouchDB.uuids_cache =
-          CouchDB.uuids_cache.slice(0, CouchDB.uuids_cache.length - n);
-    }
-    return uuids;
-  } else {
-    CouchDB.last_req = CouchDB.request("GET", "/_uuids?count=" + (100 + n));
-    CouchDB.maybeThrowError(CouchDB.last_req);
-    var result = JSON.parse(CouchDB.last_req.responseText);
-    CouchDB.uuids_cache =
-        CouchDB.uuids_cache.concat(result.uuids.slice(0, 100));
-    return result.uuids.slice(100);
-  }
-}
 
 CouchDB.maybeThrowError = function(req) {
   if (req.status >= 400) {
