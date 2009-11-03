@@ -16,8 +16,8 @@
 /*global CouchDB, CouchDBServer */
 
 // Verify we have a JSON library
-if (typeof JSON !== "object" || typeof JSON.parse !== "function" || 
-    typeof JSON.stringify !== "function") { 
+if (typeof JSON !== "object" || typeof JSON.parse !== "function" ||
+    typeof JSON.stringify !== "function") {
     throw new Error("A JSON library was not found");
 }
 
@@ -432,13 +432,13 @@ function CouchDBServer(uri) {
     this.uri = uri || "http://localhost:5984";
     this.httpHeaders = {};
 
-    /** 
+    /**
      * this is the XMLHttpRequest object from last request made by the following
      * functions (except for calls to request itself).
      *
      * Use this from callers to check HTTP status or header values of requests.
      */
-    this.last_req = null; 
+    this.last_req = null;
 
     this.openDb = function openDb(name, forceCreate) {
         var db = new CouchDB(name, this.httpHeaders, this);
@@ -450,7 +450,7 @@ function CouchDBServer(uri) {
     };
 
     this.createDb = function createDb(name) {
-        var forceCreate = true; 
+        var forceCreate = true;
         return this.openDb(name, forceCreate);
     };
 
@@ -460,7 +460,7 @@ function CouchDBServer(uri) {
     };
 
     // These methods are versions of the CouchDB static methods
-    
+
     this.allDbs = function allDbs() {
         this.last_req = this.request("GET", "/_all_dbs");
         CouchDB.maybeThrowError(this.last_req);
@@ -512,7 +512,7 @@ function CouchDBServer(uri) {
     this.requestStats = function requestStats(module, key, test) {
         var query_arg = "";
         if(test !== null) { query_arg = "?flush=true"; }
-        var stat = this.request("GET", "/_stats/" + module + "/" + key + 
+        var stat = this.request("GET", "/_stats/" + module + "/" + key +
             query_arg).responseText;
         return JSON.parse(stat)[module][key];
     };
