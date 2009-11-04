@@ -341,9 +341,12 @@ CouchDB.getVersion = function() {
 CouchDB.replicate = function(source, target, rep_options) {
   rep_options = rep_options || {};
   var headers = rep_options.headers || {};
+  var body = rep_options.body || {};
+  body.source =  source;
+  body.target = target;
   CouchDB.last_req = CouchDB.request("POST", "/_replicate", {
     headers: headers,
-    body: JSON.stringify({source: source, target: target})
+    body: JSON.stringify(body);
   });
   CouchDB.maybeThrowError(CouchDB.last_req);
   return JSON.parse(CouchDB.last_req.responseText);
@@ -482,7 +485,13 @@ function CouchDBServer(uri) {
         return JSON.parse(this.last_req.responseText).version;
     };
 
-    this.replicate = function replicate(source, target) {
+    this.replicate = function replicate(source, target, rep_options) {
+        rep_options = rep_options || {};
+        var headers = rep_options.headers || {},
+            body = rep_options.body || {};
+        body.source =  source;
+        body.target = target;
+
         this.last_req = this.request("POST", "/_replicate", {
             body: JSON.stringify({source: source, target: target})
         });
